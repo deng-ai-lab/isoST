@@ -1,0 +1,23 @@
+params:
+  K: 8
+  alpha: 0.1
+  beta_end_value: 0.05
+  beta_n_iterations: 50
+  beta_start_iteration: 50
+  beta_start_value: 1
+  delta_d: 0.01
+  dual: true
+  gene_dim: 50
+  head_num: 1
+  hidden_dim: 64
+  lr: 0.001
+  method: euler
+  optimizer_name: NAdam
+  std_seq: 0.1
+  std_x: 0.01
+  std_y: 0.01
+  std_z: 0.1
+  stride: 1
+  warm_up_rate: 1
+  weight_decay: 1.0e-08
+trainer: IsoST
