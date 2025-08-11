@@ -12,7 +12,7 @@ We present **isoST**, a framework to reconstruct continuous, isotropic-resolutio
 
 > **Fig. 1 | An overview of the isoST.**(**A**) isoST takes as input a series of  K parallel two-dimensional (2D) spatial transcriptomics slices. (**B**) isoST models spatial continuity along the z-axis using stochastic differential equations (SDEs) to reconstruct 3D transcriptomics profiles at isotropic resolution. Starting from an observed slice at depth $z_{k}$ , the model iteratively propagates each cell’s spatial position and gene expression to the next layer $z_{k+1}$ through integration over small steps of size $\Delta z$.  (**C**) A schematic of a single reconstruction step from depth z to $z+\Delta z$ . The shape gradient term $\mu_{s}(z)$ determines the directional shift in position for each cell, while the expression gradient term $\mu_{g}(z)$ estimates the gradient of gene expression used to impute the next layer.
 
-![image-20250811162207294](Three-dimensional spatial transcriptomics at isotropic resolution enabled by artificial intelligence.assets/image-20250811162207294.png)
+![image-20250811162207294](README/image-20250811162207294.png)
 
 > **Fig. 2 | The model architecture and optimization of isoST.** (**A**) Illustration of the isoST inference process from a profiled slice at depth $z_{k}$ to the next layer $z_{k}+\Delta z$ . A spatial graph is constructed using data point coordinates from the input slice. Two graph neural networks are then applied to predict the shape gradient $\mu_{s}(z)$ and the expression gradient $\mu_{g}(z)$. These gradients are used to generate the reconstructed slice at depth $z_{k}+\Delta z$ . (**B**) Inference between two observed slices. Starting from the slice at $z_{k}$, isoST iteratively reconstructs intermediate layers by applying the shape and expression inference modules $\mu_{s}$ and  $\mu_{g}$ over small increments $\Delta z$. The reconstructed expression at the next observed slice   is compared to the measured profile to compute the loss.
 
@@ -46,7 +46,7 @@ Normalization:
 
   - Subtract each axis’s own minimum value.
 
-  - Divide both axes by the **maximum width** across x and y (ensuring isotropic scaling in the xy-plane).
+  - Divide both axes by the **maximum width** across x and y (ensuring isotropic scaling in the xy-plane).  
     $$
     x' = \frac{x - \min(x)}{\max\left( \max(x) - \min(x),\ \max(y) - \min(y) \right)}
     $$
