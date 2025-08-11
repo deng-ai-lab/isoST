@@ -47,21 +47,18 @@ Normalization:
   - Subtract each axis’s own minimum value.
 
   - Divide both axes by the **maximum width** across x and y (ensuring isotropic scaling in the xy-plane).  
-    $$
-    x' = \frac{x - \min(x)}{\max\left( \max(x) - \min(x),\ \max(y) - \min(y) \right)}
-    $$
-
-    $$
-    y' = \frac{y - \min(y)}{\max\left( \max(x) - \min(x),\ \max(y) - \min(y) \right)}
-    $$
-
-    This ensures isotropic scaling in the xy-plane.
-
-    Python example:
-
-    ```python
-    import torch
     
+    $x' = \frac{x - \min(x)}{\max\left( \max(x) - \min(x),\ \max(y) - \min(y) \right)}$
+    
+$y' = \frac{y - \min(y)}{\max\left( \max(x) - \min(x),\ \max(y) - \min(y) \right)}$
+    
+    This ensures isotropic scaling in the xy-plane.
+    
+Python example:
+    
+```python
+    import torch
+
     # coords: tensor of shape (N, 2) for x, y
     min_x, min_y = coords[:, 0].min(), coords[:, 1].min()
     width_x = coords[:, 0].max() - min_x
@@ -71,7 +68,7 @@ Normalization:
     coords[:, 0] = (coords[:, 0] - min_x) / max_width
     coords[:, 1] = (coords[:, 1] - min_y) / max_width
     ```
-
+  
 - **PC features**: min–max normalization per feature.
 
 ### 1.2 Normalization metadata
