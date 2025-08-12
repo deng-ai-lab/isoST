@@ -35,6 +35,8 @@ conda activate isoST
 
 ## 1) Input Data & Directory Structure
 
+Dataset used for reproduction is available at  [Three-dimensional spatial transcriptomics at isotropic resolution enabled by artificial intelligence](https://figshare.com/articles/dataset/Three-dimensional_spatial_transcriptomics_at_isotropic_resolution_enabled_by_artificial_intelligence/29890850)
+
 ### 1.1 Slice data (`.pt`)
 
 One `.pt` file per slice, shape **N × (3 + feature_dim)**:
@@ -50,10 +52,17 @@ Normalization:
 
   - Divide both axes by the **maximum width** across x and y (ensuring isotropic scaling in the xy-plane).  
     
-  $x' = ({x - \min(x)})/d$<br>
-  $y' = ({y - \min(y)})/d$<br>
-  $d = \max\{(max(x)-min(x), max(y)-min(y)\}$
-
+    $$
+    x' = ({x - \min(x)})/d
+    $$
+    
+    $$
+    y' = ({y - \min(y)})/d
+    $$
+    
+    $$
+    d=max\{(max(x)-min(x), max(y)-min(y)\}
+    $$
     
     This ensures isotropic scaling in the xy-plane.
 
@@ -108,22 +117,21 @@ proj      = data/zhuang_ABCA_2/zscore_PC50_minmax
 {data_root}/{proj}/1_of_5_normPC_1/
   ├── Zhuang-ABCA-2.004_log_PC.pt
   ├── Zhuang-ABCA-2.005_log_PC.pt
-  ├── ...
-  ├── min_dic.csv
-  └── scale_dic.csv
+  └── ...
 
 # Full dataset for inference
 {data_root}/{proj}/1_of_1_normPC_1/
   ├── Zhuang-ABCA-2.004_log_PC.pt
-  ├── ...
-  ├── min_dic.csv
-  └── scale_dic.csv
+  ├── Zhuang-ABCA-2.005_log_PC.pt
+  └── ...
 
 # Metadata
 {data_root}/zhuang/zhuang_ABCA_2/
   ├── gene.csv
   └── zscore_PC50_minmax/
-      └── zscore_pc_model.pkl
+      ├── zscore_pc_model.pkl
+      ├── min_dic.csv
+      └── scale_dic.csv
 ```
 
 **Note:** file names must match the `slide_names` definition in the notebook (`_log_PC` suffix included).
@@ -228,7 +236,7 @@ slide_names = [f'{name}_log_PC' for name in slide_names_]
 
 proj = f'data/zhuang/zhuang_ABCA_2/zscore_PC{dim}_minmax'
 batch_num = 5  # 1_of_5 subset example
-data_dir = f'{data_root}/{proj}/1_of_{batch_num}_normPC_1'
+data_dir = os.path.join(project_root, 'data', f'{proj}/1_of_{batch_num}_normPC_1')
 ```
 
 Key points:
@@ -372,7 +380,7 @@ def biaxial_train(
 ```python
 from utils.inference import fine_inference
 
-total_data_dir = f'{data_root}/{proj}/1_of_1_normPC_1/'
+total_data_dir = os.path.join(project_root, 'data', f'{proj}/1_of_1_normPC_1')
 fine_inference(
     experiment_dir,
     total_data_dir,
@@ -488,7 +496,8 @@ def fine_inference(
 
 ```python
 from utils.postprocess import VolumeProcessor
-gene = pd.read_csv(f"{data_root}/zhuang/zhuang_ABCA_2/gene.csv", index_col=0)
+gene_path = os.path.join(project_root, 'data', f'zhuang_ABCA_2/gene.csv')
+gene = pd.read_csv(gene_path, index_col=0)
 
 processor = VolumeProcessor(
     data_dir=f"{data_root}/zhuang/zhuang_ABCA_2",
@@ -519,9 +528,13 @@ pc_df.to_csv(f"{result_dir}/pc_volume.csv")
 ```python
 import joblib
 
-pc_model = joblib.load(
-    f"{data_root}/zhuang/zhuang_ABCA_2/zscore_PC50_minmax/zscore_pc_model.pkl"
-)
+
+def load_model(model_path):
+    pca_model = joblib.load(model_path)
+    return pca_model
+
+model_path = os.path.join(project_root, 'data', f'{proj}/zscore_pc_model.pkl')
+pc_model = load_model(model_path)
 
 processor.pc_to_expression(volume, pc_model, 220)
 ```
@@ -571,7 +584,4 @@ Permission is hereby granted, free of charge, to any person obtaining a copy of 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-
-
 
