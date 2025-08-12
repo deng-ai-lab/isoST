@@ -2,19 +2,21 @@
 
 isoST is a generative model designed to reconstruct 3D spatial transcriptomic profiles with isotropic resolutions from sparsely sampled serial sections.
 
+<video src="README/vedio.mp4"></video>
+
 ## Overview
 
 Accurately mapping isotropic-resolution 3D spatial transcriptomes is a major challenge in biology. Current technologies cannot directly achieve full 3D profiling, so tissues are typically sectioned into serial 2D slices for individual profiling.
 
 We present **isoST**, a framework to reconstruct continuous, isotropic-resolution 3D transcriptomic landscapes from sparsely sampled serial sections. Assuming gene expression varies smoothly in 3D space, isoST models expression dynamics along tissue depth using stochastic differential equations (SDEs), producing a continuous 3D field that enables high-fidelity reconstruction from limited slices.
 
-![image-20250811163528541](README/image-20250811163528541.png)
+![image-20250812170426022](README/overview.png)
 
-> **Fig. 1 | An overview of the isoST.**(**A**) isoST takes as input a series of  K parallel two-dimensional (2D) spatial transcriptomics slices. (**B**) isoST models spatial continuity along the z-axis using stochastic differential equations (SDEs) to reconstruct 3D transcriptomics profiles at isotropic resolution. Starting from an observed slice at depth $z_{k}$ , the model iteratively propagates each cell’s spatial position and gene expression to the next layer $z_{k+1}$ through integration over small steps of size $\Delta z$.  (**C**) A schematic of a single reconstruction step from depth z to $z+\Delta z$ . The shape gradient term $\mu_{s}(z)$ determines the directional shift in position for each cell, while the expression gradient term $\mu_{g}(z)$ estimates the gradient of gene expression used to impute the next layer.
+> **Fig. 1 | An overview of the isoST.**(**a**) isoST takes as input a series of  K parallel two-dimensional (2D) spatial transcriptomics slices. (**b**) isoST models spatial continuity along the z-axis using stochastic differential equations (SDEs) to reconstruct 3D transcriptomics profiles at isotropic resolution. Starting from an observed slice at depth $z_{k}$ , the model iteratively propagates each cell’s spatial position and gene expression to the next layer $z_{k+1}$ through integration over small steps of size $\Delta z$.  (**c**) A schematic of reconstruction steps from depth $z_{k}$ to $z_{k+1}$ . The shape gradient term $\mu_{s}(z)$ determines the directional shift in position for each cell, while the expression gradient term $\mu_{g}(z)$ estimates the gradient of gene expression used to impute the next layer.
 
-![image-20250811162207294](README/image-20250811162207294.png)
+![image-20250812163004285](README/model.png)
 
-> **Fig. 2 | The model architecture and optimization of isoST.** (**A**) Illustration of the isoST inference process from a profiled slice at depth $z_{k}$ to the next layer $z_{k}+\Delta z$ . A spatial graph is constructed using data point coordinates from the input slice. Two graph neural networks are then applied to predict the shape gradient $\mu_{s}(z)$ and the expression gradient $\mu_{g}(z)$. These gradients are used to generate the reconstructed slice at depth $z_{k}+\Delta z$ . (**B**) Inference between two observed slices. Starting from the slice at $z_{k}$, isoST iteratively reconstructs intermediate layers by applying the shape and expression inference modules $\mu_{s}$ and  $\mu_{g}$ over small increments $\Delta z$. The reconstructed expression at the next observed slice   is compared to the measured profile to compute the loss.
+> **Fig. 2 | The model architecture  of isoST.** Illustration of the isoST inference process from a profiled slice at depth $z$ to the next layer $z+\Delta z$ . A spatial graph is constructed using data point coordinates from the input slice. Two graph neural networks are then applied to predict the shape gradient $\mu_{s}(z)$ and the expression gradient $\mu_{g}(z)$. 
 
 ## Installation
 
@@ -48,12 +50,10 @@ Normalization:
 
   - Divide both axes by the **maximum width** across x and y (ensuring isotropic scaling in the xy-plane).  
     
-    $x' = \frac{x - \min(x)}{\max\left( \max(x) - \min(x),\ \max(y) - \min(y) \right)}$
-    
-$y' = \frac{y - \min(y)}{\max\left( \max(x) - \min(x),\ \max(y) - \min(y) \right)}$
+    ![屏幕截图 2025-08-12 161619](README/formular.png)
     
     This ensures isotropic scaling in the xy-plane.
-    
+
 Python example:
     
 ```python
@@ -67,8 +67,8 @@ Python example:
     
     coords[:, 0] = (coords[:, 0] - min_x) / max_width
     coords[:, 1] = (coords[:, 1] - min_y) / max_width
-    ```
-  
+```
+
 - **PC features**: min–max normalization per feature.
 
 ### 1.2 Normalization metadata
