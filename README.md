@@ -2,7 +2,7 @@
 
 isoST is a generative model designed to reconstruct 3D spatial transcriptomic profiles with isotropic resolutions from sparsely sampled serial sections.
 
-<video src="README/vedio.mp4"></video>
+![demo](README/demo-v2.gif)
 
 ## Overview
 
@@ -50,7 +50,13 @@ Normalization:
 
   - Divide both axes by the **maximum width** across x and y (ensuring isotropic scaling in the xy-plane).  
     
-    ![屏幕截图 2025-08-12 161619](README/formular.png)
+    $$
+    x' = \frac{x - \min(x)}{\max\left( \max(x) - \min(x),\ \max(y) - \min(y) \right)}
+    $$
+    
+    $$
+    y' = \frac{y - \min(y)}{\max\left( \max(x) - \min(x),\ \max(y) - \min(y) \right)}
+    $$
     
     This ensures isotropic scaling in the xy-plane.
 
