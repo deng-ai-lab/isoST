@@ -35,7 +35,7 @@ conda activate isoST
 
 ## 1) Input Data & Directory Structure
 
-Dataset used for reproduction is available at  [Three-dimensional spatial transcriptomics at isotropic resolution enabled by artificial intelligence](https://figshare.com/articles/dataset/Three-dimensional_spatial_transcriptomics_at_isotropic_resolution_enabled_by_artificial_intelligence/29890850)
+The dataset used for reproduction will be released upon publication.
 
 ### 1.1 Slice data (`.pt`)
 
@@ -52,11 +52,17 @@ Normalization:
 
   - Divide both axes by the **maximum width** across x and y (ensuring isotropic scaling in the xy-plane).  
     
-    $x' = ({x - \min(x)})/d$<br>
+    $$
+    x' = ({x - \min(x)})/d
+    $$
     
-    $y' = ({y - \min(y)})/d$<br>
+    $$
+    y' = ({y - \min(y)})/d
+    $$
     
-    $d=max\{(max(x)-min(x), max(y)-min(y))\}$
+    $$
+    d=max\{(max(x)-min(x), max(y)-min(y)\}
+    $$
     
     This ensures isotropic scaling in the xy-plane.
 
@@ -269,6 +275,27 @@ if not os.path.exists(result_dir):
 ```python
 from utils.train_ode import biaxial_train
 
+"""
+Main training function for isoST.
+This function:
+1) Loads configuration settings
+2) Initializes the trainer
+3) Loads the dataset
+4) Runs the training loop
+
+Args:
+    experiment_dir (str): Path to save experiment outputs and checkpoints.
+    data_dir (str): Path to preprocessed input data.
+    slide_names (list): List of slice identifiers (without file extension).
+    batch_num (int): Number of batches (or subset index) used for training.
+    config_file (str): Path to YAML configuration file.
+    device (str): Device identifier (e.g., 'cuda:0' or 'cpu').
+    checkpoint_every (int): Interval (epochs) to save model checkpoints.
+    backup_every (int): Interval (epochs) to save backup checkpoints.
+    epoch (list): Training epochs for each phase.
+    mode (str): Training mode (e.g., 'joint', 'shape', 'expression').
+"""
+
 biaxial_train(
     experiment_dir=experiment_dir,
     data_dir=data_dir,
@@ -284,96 +311,28 @@ biaxial_train(
 
 ```
 
-where
-
-```python
-def biaxial_train(
-        experiment_dir,
-        data_dir,
-        slide_names,
-        batch_num,
-        config_file,
-        device,
-        checkpoint_every,
-        backup_every,
-        epoch,
-        mode,
-) -> object:
-    """
-    Main training function for isoST.
-    This function:
-    1) Loads configuration settings
-    2) Initializes the trainer
-    3) Loads the dataset
-    4) Runs the training loop
-
-    Args:
-        experiment_dir (str): Path to save experiment outputs and checkpoints.
-        data_dir (str): Path to preprocessed input data.
-        slide_names (list): List of slice identifiers (without file extension).
-        batch_num (int): Number of batches (or subset index) used for training.
-        config_file (str): Path to YAML configuration file.
-        device (str): Device identifier (e.g., 'cuda:0' or 'cpu').
-        checkpoint_every (int): Interval (epochs) to save model checkpoints.
-        backup_every (int): Interval (epochs) to save backup checkpoints.
-        epoch (list): Training epochs for each phase.
-        mode (str): Training mode (e.g., 'joint', 'shape', 'expression').
-    """
-
-    # -----------------------------
-    # Load the configuration file
-    # -----------------------------
-    with open(config_file, 'r') as file:
-        config = yaml.safe_load(file)
-
-    # ---------------------------------------
-    # Save a copy of config into experiment_dir
-    # (ensures reproducibility and record-keeping)
-    # ---------------------------------------
-    os.makedirs(experiment_dir, exist_ok=True)
-    with open(os.path.join(experiment_dir, 'config.yml'), 'w') as file:
-        yaml.dump(config, file)
-
-    # ----------------------------------------------------
-    # Dynamically instantiate the trainer from config file
-    # Example: if config['trainer'] == 'IsoST', will create IsoST(**params)
-    # ----------------------------------------------------
-    TrainerClass = getattr(training_module, config['trainer'])
-    trainer = TrainerClass(device=device, **config['params'])
-    trainer.to(device)  # Move model to the specified device
-
-    ###########
-    # Dataset #
-    ###########
-    # ---------------------------------------------------------
-    # Load the training dataset:
-    #   - Reads .pt slice files from data_dir
-    #   - Selects slices according to slide_names & batch_num
-    #   - Applies mode-specific preprocessing if needed
-    # ---------------------------------------------------------
-    train_set = get_dataset(data_dir, slide_names, batch_num, device, mode)
-
-    # ---------------------
-    # Start the optimization
-    # ---------------------
-    tqdm.write('========== Optimization ============')
-    train(
-        trainer,             # Model/trainer instance
-        experiment_dir,      # Where to save checkpoints
-        train_set,           # Loaded dataset
-        batch_num,           # Number of batches/subsets
-        epoch,               # Epochs per phase
-        checkpoint_every,    # Save checkpoint frequency
-        backup_every         # Save backup frequency
-    )
-
-```
-
 ### Step 9: Inference on full dataset
 
 ```python
 from utils.inference import fine_inference
+"""
+Perform fine-grained inference using a trained isoST model.
 
+This function:
+1) Loads a pretrained model and configuration from experiment_dir
+2) Initializes the trainer
+3) Runs the fine inference process to reconstruct intermediate slices
+
+Args:
+    experiment_dir (str): Directory containing trained model and config.
+    data_dir (str): Path to preprocessed input data (full dataset for inference).
+    u_name_list (list): List of slice identifiers for inference.
+    mode (str): Inference mode (e.g., 'joint', 'shape', 'expression').
+    defined_d (float): Δz step size for interpolation during inference.
+    result_dir (str): Directory to save inference outputs.
+    batch_num (int): Number of batches (or subset index) used in inference.
+    device (str): Device to run inference on ('cuda' or 'cpu').
+"""
 total_data_dir = os.path.join(project_root, 'data', f'{proj}/1_of_1_normPC_1')
 fine_inference(
     experiment_dir,
@@ -385,103 +344,6 @@ fine_inference(
     batch_num,
     device
 )
-```
-
-where
-
-```python
-def fine_inference(
-        experiment_dir,
-        data_dir,
-        u_name_list,
-        mode,
-        defined_d,
-        result_dir,
-        batch_num,
-        device='cuda'
-):
-    """
-    Perform fine-grained inference using a trained isoST model.
-
-    This function:
-    1) Loads a pretrained model and configuration from experiment_dir
-    2) Initializes the trainer
-    3) Runs the fine inference process to reconstruct intermediate slices
-
-    Args:
-        experiment_dir (str): Directory containing trained model and config.
-        data_dir (str): Path to preprocessed input data (full dataset for inference).
-        u_name_list (list): List of slice identifiers for inference.
-        mode (str): Inference mode (e.g., 'joint', 'shape', 'expression').
-        defined_d (float): Δz step size for interpolation during inference.
-        result_dir (str): Directory to save inference outputs.
-        batch_num (int): Number of batches (or subset index) used in inference.
-        device (str): Device to run inference on ('cuda' or 'cpu').
-    """
-
-    config_file = None
-
-    # ----------------------------------------------------
-    # Check if the experiment directory already contains
-    # both the trained model and configuration file
-    # ----------------------------------------------------
-    pretrained = os.path.isfile(os.path.join(experiment_dir, 'model.pt')) \
-                 and os.path.isfile(os.path.join(experiment_dir, 'config.yml'))
-
-    resume_training = pretrained
-
-    if resume_training:
-        load_model_file = os.path.join(experiment_dir, 'model.pt')
-        config_file = os.path.join(experiment_dir, 'config.yml')
-
-    # -----------------------------
-    # Load configuration parameters
-    # -----------------------------
-    with open(config_file, 'r') as file:
-        config = yaml.safe_load(file)
-
-    # ---------------------------------------
-    # Save a copy of config back to experiment_dir
-    # (ensures the config used for inference is recorded)
-    # ---------------------------------------
-    with open(os.path.join(experiment_dir, 'config.yml'), 'w') as file:
-        yaml.dump(config, file)
-
-    # ----------------------------------------------------
-    # Dynamically instantiate the trainer from config file
-    # ----------------------------------------------------
-    TrainerClass = getattr(training_module, config['trainer'])
-    trainer = TrainerClass(device=device, **config['params'])
-
-    # ---------------------------
-    # Create result directory if missing
-    # ---------------------------
-    if not os.path.exists(result_dir):
-        os.makedirs(result_dir)
-
-    # -------------------------------------------------
-    # Load pretrained model weights (if available)
-    # -------------------------------------------------
-    if load_model_file:
-        trainer.load(load_model_file)
-        print('Pretrained Model Loaded!')
-
-    # Move trainer to the specified device
-    trainer.to(device)
-
-    #############
-    # inference #
-    #############
-    # Run fine-grained inference to reconstruct slices
-    trainer.fine_infer(
-        data_dir,        # Path to input data
-        u_name_list,     # List of slice names
-        mode,            # Inference mode
-        defined_d,       # Interpolation step size
-        result_dir,      # Output directory
-        batch_num,       # Number of batches/subset index
-        device           # Device for computation
-    )
 ```
 
 ## 4) Post-processing (3D volume reconstruction)
@@ -578,6 +440,4 @@ Permission is hereby granted, free of charge, to any person obtaining a copy of 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-
 
