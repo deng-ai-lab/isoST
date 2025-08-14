@@ -52,17 +52,11 @@ Normalization:
 
   - Divide both axes by the **maximum width** across x and y (ensuring isotropic scaling in the xy-plane).  
     
-    $$
-    x' = ({x - \min(x)})/d
-    $$
+    $x' = ({x - \min(x)})/d$<br>
     
-    $$
-    y' = ({y - \min(y)})/d
-    $$
+    $y' = ({y - \min(y)})/d$<br>
     
-    $$
-    d=max\{(max(x)-min(x), max(y)-min(y)\}
-    $$
+    $d=max\{(max(x)-min(x), max(y)-min(y))\}$<br>
     
     This ensures isotropic scaling in the xy-plane.
 
@@ -440,4 +434,5 @@ Permission is hereby granted, free of charge, to any person obtaining a copy of 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 
