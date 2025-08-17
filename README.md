@@ -35,8 +35,6 @@ conda activate isoST
 
 ## 1) Input Data & Directory Structure
 
-The dataset used for reproduction will be released upon publication.
-
 ### 1.1 Slice data (`.pt`)
 
 One `.pt` file per slice, shape **N × (3 + feature_dim)**:
