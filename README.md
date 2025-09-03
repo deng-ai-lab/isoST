@@ -37,7 +37,9 @@ conda activate isoST
 
 ### 1.1 Slice data (`.pt`)
 
-One `.pt` file per slice, shape **N × (3 + feature_dim)**:
+For each dataset, all slices have already been **preprocessed and normalized**, so they can be directly used as isoST inputs without any further processing.
+
+Each slice is stored in one `.pt` file, with shape **N × (3 + feature_dim)**:
 
 - First 3 columns: `(x, y, z)` spatial coordinates, where **`z` is the interpolation axis**.
 - Remaining columns: features (in this project: **top 50 PCs** of gene expression).
@@ -49,17 +51,18 @@ Normalization:
   - Subtract each axis’s own minimum value.
 
   - Divide both axes by the **maximum width** across x and y (ensuring isotropic scaling in the xy-plane).  
-    
+
     $x' = ({x - \min(x)})/d$<br>
-    
+
     $y' = ({y - \min(y)})/d$<br>
-    
+
     $d=max(max(x)-min(x), max(y)-min(y))$<br>
-    
+
     This ensures isotropic scaling in the xy-plane.
 
 Python example:
     
+
 ```python
     import torch
 
@@ -77,9 +80,10 @@ Python example:
 
 ### 1.2 Normalization metadata
 
-- Store normalization parameters in the same folder as `.pt` slices:
-  - `min_dic.csv` — minimum value for each dimension (`xy`, `PC_1`, …, `PC_50`).
-  - `scale_dic.csv` — scaling factor for each dimension (for de-normalization).
+Each dataset is accompanied by metadata files that store normalization parameters in the same folder as the `.pt` slices:
+
+- `min_dic.csv` — minimum value for each dimension (`xy`, `PC_1`, …, `PC_50`).
+- `scale_dic.csv` — scaling factor for each dimension (for de-normalization).
 
 **Example: `min_dic.csv`** (stores minimum values for each dimension)
 
@@ -95,17 +99,21 @@ Python example:
 
 ### 1.3 Gene list & PCA model
 
-- In the project metadata folder, include:
-  - `gene.csv` — column `gene_symbol` listing all genes.
-  - `zscore_pc_model.pkl` — PCA model saved with joblib (used to invert PCs back to gene expression).
+- `gene.csv` — column `gene_symbol` listing all genes included in PCA.
+
+- `zscore_pc_model.pkl` — PCA model saved with joblib, used to invert PCs back to gene expression space.
+
+  These files are shared across datasets to ensure consistent feature space.
 
 ### 1.4 Example directory layout
+
+All datasets follow the same folder structure and file naming conventions. Some datasets are split into subsets for training (e.g., `1_of_5`, `1_of_16`), while others may only provide the full dataset (`1_of_1`). The presence of training subsets is optional and depends on the experimental design.
 
 ```bash
 data_root = /path/to/isoST
 proj      = data/zhuang_ABCA_2/zscore_PC50_minmax
 
-# Training subset (1_of_5 in the example)
+# (Optional) Training subset
 {data_root}/{proj}/1_of_5_normPC_1/
   ├── Zhuang-ABCA-2.004_log_PC.pt
   ├── Zhuang-ABCA-2.005_log_PC.pt
@@ -126,7 +134,12 @@ proj      = data/zhuang_ABCA_2/zscore_PC50_minmax
       └── scale_dic.csv
 ```
 
-**Note:** file names must match the `slide_names` definition in the notebook (`_log_PC` suffix included).
+**Notes:**
+
+- The directory structure is identical for all datasets (mouse brain, embryo, CS7 human gastrula, kidney, spinal cord, CCFv3-derived features).
+- Training subsets (`1_of_m`) are designed to balance dataset size and computation time. The provided splits guarantee that each subset can be trained on a single **NVIDIA RTX 3090 GPU**.
+- If your available GPU memory is insufficient, you may manually use only the first `1/n` portion of the data. Since the datasets were **randomly shuffled before saving**, taking the first fraction still yields a representative sample.
+- File names must match the `slide_names` definition in the notebook (including the `_log_PC` suffix).
 
 ## 2) Configuration file (`config.yml`)
 
