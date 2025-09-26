@@ -156,13 +156,13 @@ params:
   weight_decay: 1e-8
 
   method: euler
-  delta_d: 0.01        # interpolation step along z-axis
+  delta_d: 0.01        # interpolation step along z-axis (Delta z)
   stride: 1            # loss computation interval along depth
 
   std_x: 0.01   # sigma_x
   std_y: 0.01   # sigma_y
   std_z: 0.1    # sigma_z
-  std_seq: 0.1  # Delta z
+  std_seq: 0.1  # sigma_g
 
   alpha: 0.1
   dual: true  # bidirectional trainig and inference
