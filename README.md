@@ -1,4 +1,4 @@
-# Three-dimensional spatial transcriptomics at isotropic resolution  enabled with generative artificial intelligence
+# Reconstructing isotropic-resolution 3D spatial transcriptomics from serial 2D sections by modeling tissue continuity
 
 isoST is a generative model designed to reconstruct 3D spatial transcriptomic profiles with isotropic resolutions from sparsely sampled serial sections.
 
