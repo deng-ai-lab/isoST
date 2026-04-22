@@ -1,4 +1,4 @@
-# Reconstructing organ-wide isotropic 3D spatial transcriptomics  from sparse 2D sections through tissue continuity modeling
+# Reconstructing isotropic-resolution 3D spatial transcriptomics from serial 2D sections by modeling tissue continuity
 
 isoST is a generative model designed to reconstruct 3D spatial transcriptomic profiles with isotropic resolutions from sparsely sampled serial sections.
 
