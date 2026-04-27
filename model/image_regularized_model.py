@@ -59,7 +59,7 @@ class IsoSTImageReg(IsoST):
 
     def _load_linear_model(self, slice_data_dir):
         self.linear_frozen = LinearRegressionModel(self.gene_dim, self.img_feature_dim).to(self.device)
-        weights = torch.load(f'{slice_data_dir}/linear_regression_weights.pth')
+        weights = torch.load(f'{slice_data_dir}/linear_regression_weights.pth', map_location=self.device)
         self.linear_frozen.load_state_dict(weights)
         for p in self.linear_frozen.parameters():
             p.requires_grad = False
