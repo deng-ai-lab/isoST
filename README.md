@@ -97,6 +97,7 @@ Detailed tutorial notes are organized in `docs/`:
 
 - [Documentation index](docs/index.md)
 - [Data format and layout](docs/data.md)
+- [Registration and alignment](docs/registration-and-alignment.md)
 - [Configuration](docs/configuration.md)
 - [Notebook workflows](docs/notebook-workflows.md)
 - [Post-processing](docs/post-processing.md)

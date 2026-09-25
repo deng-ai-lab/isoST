@@ -56,6 +56,7 @@ The downloader is `script/download_data.py`. After extraction into the repositor
 - Training subset: `data/zhuang_ABCA_3/zscore_PC50_minmax/1_of_16_normPC_1`
 - Full inference data: `data/zhuang_ABCA_3/zscore_PC50_minmax/1_of_1_normPC_1`
 - CCFv3 features: `data/CCFv3_feature`
+- Coordinate provenance and feature sampling: [Registration and alignment](registration-and-alignment.md)
 - Gene list: `data/zhuang_ABCA_3/gene.csv`
 - PCA model: `data/zhuang_ABCA_3/zscore_PC50_minmax/zscore_pc_model.pkl`
 

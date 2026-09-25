@@ -5,6 +5,7 @@ This chapter set keeps the detailed tutorial material outside the concise projec
 ## Chapters
 
 - [Data format and layout](data.md): input `.pt` tensors, naming rules, normalization metadata, PCA files, and workflow data paths.
+- [Registration and alignment](registration-and-alignment.md): upstream MERFISH-to-CCFv3 registration, published coordinates, and local image feature sampling scripts.
 - [Configuration](configuration.md): root YAML files and the meaning of key model and training parameters.
 - [Notebook workflows](notebook-workflows.md): how the tutorial notebooks are organized, where to run them from, and the training and inference helper arguments.
 - [Post-processing](post-processing.md): volume reconstruction, density outputs, PC tables, and PC to gene expression recovery.

@@ -13,6 +13,7 @@ tests/
 *PC*
 
 script/*
+!script/extract_ccfv3_cell_features.py
 !script/img_reg/*
 !script/mouse_brain/*
 !script/mouse_embryo/*
