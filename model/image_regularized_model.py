@@ -1,3 +1,4 @@
+import math
 import torch
 import pandas as pd
 import torch.nn as nn
@@ -21,11 +22,22 @@ class LinearRegressionModel(nn.Module):
 
 class IsoSTImageReg(IsoST):
     def __init__(self, slice_data_dir, image_data_dir, scale_z=1, spacing=[0.01, 0.01, 0.01],
-                 slice_width=0.4, template_sample_rate=0.125, _lambda_1=1, _lambda_2=0.1, *args, **kwargs):
+                 slice_width=0.4, template_sample_rate=0.125, _lambda_1=1, _lambda_2=0.1,
+                 image_z_offset_um=0.0, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.slice_width = torch.tensor(slice_width).to(self.device)
         self.spacing = torch.tensor(spacing).to(self.device)
-        self.scale_z = scale_z
+        self.scale_z = float(scale_z)
+        self.image_z_offset_um = float(image_z_offset_um)
+        if not math.isfinite(self.image_z_offset_um):
+            raise ValueError('image_z_offset_um must be finite.')
+        if not math.isfinite(self.scale_z) or self.scale_z <= 0:
+            raise ValueError('scale_z must be finite and positive.')
+        # Model z is converted back to physical millimetres by multiplying by
+        # scale_z.  The offset therefore needs the inverse conversion here.
+        self.image_z_offset_model = (
+            self.image_z_offset_um / 1000.0 / self.scale_z
+        )
         self.w_img = _lambda_1 * self.w_coo
         self.w_exp = _lambda_2 * self.w_seq
         
@@ -74,15 +86,34 @@ class IsoSTImageReg(IsoST):
         self.f_joint = PJointV2(self.f_coo, self.f_seq, topk=5)
         self.g_joint = PJointV2(self.g_coo, self.g_seq, topk=5)
 
+    def _image_depth(self, transcriptome_depth):
+        """Return the image depth paired with a transcriptomic depth."""
+        return transcriptome_depth + self.image_z_offset_model
+
+    def _image_query_coordinates(self, transcriptome_coordinates):
+        """Shift only the z coordinate used to query image-derived features."""
+        image_coordinates = transcriptome_coordinates.clone()
+        image_coordinates[:, 2] += self.image_z_offset_model
+        return image_coordinates
+
     def _compute_image_loss(self, pred, template, depth):
+        image_depth = self._image_depth(depth)
         z = self.template_points[:, 2]
-        mask = (z >= depth - self.slice_width / 2) & (z < depth + self.slice_width / 2)
+        mask = (
+            (z >= image_depth - self.slice_width / 2)
+            & (z < image_depth + self.slice_width / 2)
+        )
+        if not torch.any(mask):
+            raise RuntimeError(
+                'The image z-offset selected an empty template window.'
+            )
         return chamfer_distance(pred[:, :2], self.template_points[mask][:, :2])
 
     def _compute_expression_loss(self, pred):
         coo_pred = pred[:, :3]
         exp_pred = pred[:, 3:]
-        img = extract_data_values(self.template_image, self.volume_downrate, coo_pred,
+        image_coordinates = self._image_query_coordinates(coo_pred)
+        img = extract_data_values(self.template_image, self.volume_downrate, image_coordinates,
                                   self.direction, self.spacing, self.origin, self.scale, self.min_value)
         pred_img = self.linear_frozen(exp_pred)
         return torch.mean((pred_img - img) ** 2)

@@ -131,7 +131,10 @@ def fine_inference(
         defined_d,
         result_dir,
         batch_num,
-        device='cuda'):
+        device='cuda',
+        train_z=None,
+        target_slide_names=None,
+        target_z=None):
     config_file = None
     # Check if the experiment directory already contains a model
     pretrained = os.path.isfile(os.path.join(experiment_dir, 'model.pt')) \
@@ -166,4 +169,179 @@ def fine_inference(
     #############
     # inference #
     #############
-    trainer.fine_infer(data_dir, u_name_list, mode, defined_d, result_dir, batch_num, device)
+    mapping_inputs = (train_z, target_slide_names, target_z)
+    if any(value is not None for value in mapping_inputs) and not all(
+            value is not None for value in mapping_inputs):
+        raise ValueError(
+            'train_z, target_slide_names and target_z must be provided together.'
+        )
+
+    required_targets = None
+    target_output_rows = None
+    if all(value is not None for value in mapping_inputs):
+        if len(u_name_list) != len(train_z):
+            raise ValueError('u_name_list and train_z must have equal length.')
+        if len(target_slide_names) != len(target_z):
+            raise ValueError(
+                'target_slide_names and target_z must have equal length.'
+            )
+        if len(set(target_slide_names)) != len(target_slide_names):
+            raise ValueError('target_slide_names must be unique.')
+        overlap = set(u_name_list) & set(target_slide_names)
+        if overlap:
+            raise ValueError(
+                f'Train/target overlap is not allowed: {sorted(overlap)}'
+            )
+
+        train_z_array = np.asarray(train_z, dtype=float)
+        target_z_array = np.asarray(target_z, dtype=float)
+        if not np.all(np.isfinite(train_z_array)) or not np.all(
+                np.isfinite(target_z_array)):
+            raise ValueError('All train_z and target_z values must be finite.')
+        if np.any(np.diff(train_z_array) <= 0):
+            raise ValueError('train_z must be strictly increasing.')
+        if np.any(target_z_array <= train_z_array[0]) or np.any(
+                target_z_array >= train_z_array[-1]):
+            raise ValueError(
+                'fine_inference only accepts interpolation targets strictly '
+                'inside the observed anchor range.'
+            )
+
+        # Derive the nominal-z to model-z mapping from observed anchors only.
+        # Held-out tensors are not opened until downstream evaluation.
+        train_model_z = []
+        for slide_name in u_name_list:
+            anchor = torch.load(
+                os.path.join(data_dir, f'shuffled_{slide_name}.pt'),
+                map_location='cpu',
+            )
+            train_model_z.append(float(torch.mean(anchor[:, 2]).item()))
+        train_model_z = np.asarray(train_model_z, dtype=float)
+        model_z_differences = np.diff(train_model_z)
+        if not (
+                np.all(model_z_differences > 0)
+                or np.all(model_z_differences < 0)):
+            raise ValueError(
+                'Observed training tensors must be strictly monotonic in mean z.'
+            )
+
+        target_model_z = np.interp(
+            target_z_array,
+            train_z_array,
+            train_model_z,
+        )
+        required_targets = [
+            (name, float(nominal_z), float(model_z))
+            for name, nominal_z, model_z in zip(
+                target_slide_names,
+                target_z_array,
+                target_model_z,
+            )
+        ]
+        target_output_rows = []
+
+    existing_outputs = [
+        name for name in os.listdir(result_dir)
+        if name.endswith('_forward.npy') and name[:-12].isdigit()
+    ]
+    if existing_outputs:
+        raise FileExistsError(
+            f'fine_inference requires an empty result directory; found '
+            f'{len(existing_outputs)} existing numbered output file(s) in '
+            f'{result_dir}.'
+        )
+
+    output_count = trainer.fine_infer(
+        data_dir,
+        u_name_list,
+        mode,
+        defined_d,
+        result_dir,
+        batch_num,
+        device,
+        required_targets=required_targets,
+        target_output_rows=target_output_rows,
+    )
+
+    mapping_path = None
+    if target_output_rows is not None:
+        mapped_names = {row['target_slide_name'] for row in target_output_rows}
+        missing = set(target_slide_names) - mapped_names
+        if missing:
+            raise RuntimeError(
+                f'No exact interpolation output was recorded for: {sorted(missing)}'
+            )
+        mapping_path = os.path.join(result_dir, 'target_depth_mapping.csv')
+        pd.DataFrame(target_output_rows).sort_values(
+            'target_nominal_z'
+        ).to_csv(mapping_path, index=False)
+
+    return {
+        'n_output_layers': int(output_count),
+        'target_depth_mapping_path': mapping_path,
+        'n_requested_targets': 0 if target_output_rows is None else len(target_output_rows),
+    }
+
+
+def edge_inference(
+        experiment_dir,
+        data_dir,
+        train_slide_names,
+        train_z,
+        target_slide_names,
+        target_z,
+        mode,
+        defined_d,
+        result_dir,
+        batch_num,
+        device='cuda'):
+    """Run normal interpolation plus leakage-free left/right extrapolation.
+
+    ``train_z`` and ``target_z`` are nominal acquisition depths. The model maps
+    them into its tensor mean-z coordinate using training anchors only; held-out
+    tensors are never loaded or used as boundary conditions.
+    """
+    model_path = os.path.join(experiment_dir, 'model.pt')
+    config_path = os.path.join(experiment_dir, 'config.yml')
+    missing = [
+        path for path in (model_path, config_path)
+        if not os.path.isfile(path)
+    ]
+    if missing:
+        raise FileNotFoundError(
+            f'Edge inference requires a trained model and config; missing: {missing}'
+        )
+
+    with open(config_path, 'r') as file:
+        config = yaml.safe_load(file)
+
+    TrainerClass = getattr(training_module, config['trainer'])
+    trainer = TrainerClass(device=device, **config['params'])
+    trainer.load(model_path)
+    trainer.to(device)
+    trainer.eval()
+    print('Pretrained Model Loaded!')
+
+    os.makedirs(result_dir, exist_ok=True)
+    existing_outputs = [
+        name for name in os.listdir(result_dir)
+        if name.endswith('_forward.npy') and name[:-12].isdigit()
+    ]
+    if existing_outputs:
+        raise FileExistsError(
+            f'Edge inference requires an empty result directory; found '
+            f'{len(existing_outputs)} existing numbered output file(s) in {result_dir}.'
+        )
+
+    return trainer.edge_infer(
+        data_dir=data_dir,
+        train_slide_names=train_slide_names,
+        train_z=train_z,
+        target_slide_names=target_slide_names,
+        target_z=target_z,
+        mode=mode,
+        defined_d=defined_d,
+        result_dir=result_dir,
+        batch_num=batch_num,
+        device=device,
+    )

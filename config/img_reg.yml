@@ -12,6 +12,7 @@ params:
   head_num: 1
   hidden_dim: 64
   image_data_dir: data/CCFv3_feature
+  image_z_offset_um: 0.0
   lr: 0.001
   method: euler
   optimizer_name: NAdam
