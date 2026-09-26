@@ -5,7 +5,7 @@ params:
   beta_n_iterations: 50
   beta_start_iteration: 50
   beta_start_value: 1
-  delta_d: 0.01
+  delta_d: 0.02
   dual: true
   gene_dim: 50
   head_num: 1
